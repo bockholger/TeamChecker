@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Team-Check">
+<link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="icon.png"><meta name="theme-color" content="#2563eb">
+<title>Team-Check</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--tx:#1b1f24;--mu:#667085;--ac:#2563eb;--bd:#e4e7ec;--c1:#2563eb;--c2:#ea580c}
+@media(prefers-color-scheme:dark){:root{--bg:#111418;--card:#1b2026;--tx:#eef1f5;--mu:#9aa4b2;--ac:#6b9bff;--bd:#2b323b;--c1:#6b9bff;--c2:#fb923c}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;padding:max(16px,env(safe-area-inset-top)) 16px max(16px,env(safe-area-inset-bottom))}
+main{max-width:760px;margin:0 auto}h1{font-size:24px;margin:4px 0}.top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:16px;margin-bottom:14px}
+select,input{font:inherit;color:var(--tx);width:100%;padding:12px;border-radius:10px;border:1px solid var(--bd);background:var(--bg);margin-top:6px}
+.btn{font:inherit;padding:11px 15px;border-radius:10px;border:0;background:var(--ac);color:#fff;font-weight:600;cursor:pointer}.btn.sec{background:transparent;color:var(--ac);border:1px solid var(--ac)}
+.row{display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap}.row input{margin:0;flex:1;min-width:140px}.tabs{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.faces{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:14px}
+.face{font:inherit;background:var(--bg);border:2px solid var(--bd);border-radius:14px;padding:10px 2px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--mu)}
+.face svg{width:100%;max-width:70px}.face span{font-size:12px;text-align:center;line-height:1.2}.face:active{border-color:var(--ac)}
+.msg{min-height:22px;margin-top:10px;font-weight:600}.ok{color:#15803d}.bad{color:#b91c1c}.hint{font-size:12px;color:var(--mu);margin-top:8px}
+.warn{background:#fef3c7;color:#78350f;border-radius:12px;padding:12px;margin-bottom:12px;font-size:14px}
+.scroll{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:14px}th,td{text-align:left;padding:8px;border-bottom:1px solid var(--bd);white-space:nowrap}th{color:var(--mu)}
+.q{font-size:19px;font-weight:600;margin-top:12px}.chart h3{font-size:15px;margin:0 0 6px}.chart svg{width:100%;height:auto}.leg{font-size:12px;color:var(--mu);display:flex;gap:14px;margin-bottom:10px}
+</style></head><body><main>
+<div class="top"><h1>Team-Check</h1><button class="btn sec" id="mode"></button></div>
+
+<div id="pin" class="card" hidden><label for="pininp" id="pinlbl"></label>
+  <div class="row"><input id="pininp" type="password" autocomplete="off"><button class="btn" id="pinok">OK</button><button class="btn sec" id="pinx">Abbrechen</button></div>
+  <div class="msg bad" id="pinmsg"></div><button class="btn sec" id="pinreset" hidden>PIN vergessen?</button></div>
+
+<div id="player" class="card">
+  <label>Wer bist du?<select id="who"></select></label>
+  <div class="tabs" style="margin:14px 0 0"><button class="btn" id="q1">Stimmung</button><button class="btn sec" id="q2">Training 🔒</button></div>
+  <div class="q" id="qtext"></div><div class="faces" id="faces"></div><div class="msg" id="msg"></div>
+  <div class="hint">Hier werden keine Ergebnisse angezeigt.</div>
+</div>
+
+<div id="trainer" hidden>
+  <div class="warn" id="warn" hidden></div>
+  <div class="tabs"><button class="btn" data-t="avg">Monatsdurchschnitt</button><button class="btn sec" data-t="all">Pro Tag</button><button class="btn sec" data-t="chart">Verlauf</button><button class="btn sec" data-t="pl">Spieler</button><button class="btn sec" data-t="bk">Sicherung</button></div>
+  <div class="card scroll" id="avg"></div><div class="card scroll" id="all" hidden></div><div class="card" id="chart" hidden></div>
+  <div class="card" id="pl" hidden><div class="row"><input id="nn" placeholder="Neuer Spieler" maxlength="40"><button class="btn" id="nadd">Hinzufügen</button></div><div id="plist"></div><div class="hint">Entfernen löscht auch alle Einträge dieses Spielers.</div></div>
+  <div class="card" id="bk" hidden>
+    <b>Daten sichern</b>
+    <div class="hint" id="last"></div>
+    <div class="row"><button class="btn" id="exp">Sicherung speichern (in Dateien)</button><button class="btn sec" id="csv">Auswertung als CSV</button></div>
+    <hr style="border:0;border-top:1px solid var(--bd);margin:16px 0">
+    <b>Sicherung wiederherstellen</b>
+    <div class="row"><button class="btn sec" id="imp">Datei auswählen…</button><input type="file" id="file" accept=".json,application/json" hidden></div>
+    <div class="hint">Ersetzt alle aktuellen Daten auf diesem iPad.</div>
+    <div class="msg" id="bm"></div>
+  </div>
+</div>
+</main>
+<script>
+const $=id=>document.getElementById(id),esc=s=>{const d=document.createElement("div");d.textContent=s;return d.innerHTML};
+const BASE=[{c:"#22c55e",m:"M30 66 Q50 86 70 66"},{c:"#84cc16",m:"M33 68 Q50 78 67 68"},{c:"#facc15",m:"M33 70 L67 70"},{c:"#fb923c",m:"M33 76 Q50 64 67 76"},{c:"#ef4444",m:"M30 80 Q50 60 70 80"}];
+const Q={mood:{q:"Wie geht es dir heute?",l:["Mir geht es super","Gut","Okay","Nicht gut","Richtig schlecht"]},training:{q:"Wie hat Dir das Training heute gefallen?",l:["War richtig gut","Gut","Okay","Nicht so gut","War totaler Mist"]}};
+let data={players:[],entries:[]},mode="spieler",qt="mood",pinFor="trainer",prevFor="trainer",D=[];
+const LS={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},del:k=>{try{localStorage.removeItem(k)}catch(e){}}};
+try{const d=JSON.parse(LS.get("tc_data"));if(d&&Array.isArray(d.players)&&Array.isArray(d.entries))data=d}catch(e){}
+function save(){try{localStorage.setItem("tc_data",JSON.stringify(data));return true}catch(e){alert("Speichern fehlgeschlagen! Bitte sofort eine Sicherung erstellen.");return false}}
+const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
+const say=(id,t,ok)=>{$(id).textContent=t;$(id).className="msg "+(ok?"ok":"bad")};
+const pname=id=>(data.players.find(p=>p.id===id)||{name:"Unbekannt"}).name;
+try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
+
+// Eingabe
+function fillWho(){const s=$("who"),cur=LS.get("tc_cur");s.innerHTML="";
+  if(!data.players.length)s.innerHTML="<option value=''>– noch keine Spieler (TrainerIn legt sie an) –</option>";
+  data.players.forEach(p=>{const o=document.createElement("option");o.value=p.id;o.textContent=p.name;if(String(p.id)===cur)o.selected=true;s.appendChild(o)})}
+$("who").onchange=e=>LS.set("tc_cur",e.target.value);
+function renderFaces(){$("qtext").textContent=Q[qt].q;$("msg").textContent="";$("q1").className="btn"+(qt==="mood"?"":" sec");$("q2").className="btn"+(qt==="training"?"":" sec");
+  const box=$("faces");box.innerHTML="";BASE.forEach((f,i)=>{const t=Q[qt].l[i],b=document.createElement("button");b.className="face";b.setAttribute("aria-label",t);
+    b.innerHTML=`<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="${f.c}" stroke="#0003" stroke-width="2"/><circle cx="35" cy="40" r="5" fill="#222"/><circle cx="65" cy="40" r="5" fill="#222"/><path d="${f.m}" fill="none" stroke="#222" stroke-width="5" stroke-linecap="round"/></svg><span>${t}</span>`;
+    b.onclick=()=>send(5-i);box.appendChild(b)})}
+$("q1").onclick=()=>{qt="mood";renderFaces()};
+$("q2").onclick=()=>{if(qt!=="training")askPin("training")};
+function send(score){const id=+$("who").value;if(!id)return say("msg","Bitte zuerst einen Spieler wählen.");
+  data.entries.push({pid:id,type:qt,score,date:today(),ts:new Date().toISOString()});
+  if(save()){say("msg","Danke, "+pname(id)+"! Gespeichert.",1);setTimeout(()=>$("msg").textContent="",3000)}else data.entries.pop()}
+
+// PIN & Modus
+async function hash(v){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode("tc:"+v));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("")}
+function askPin(p){pinFor=p;const has=LS.get("tc_pin");
+  $("pinlbl").textContent=(has?"PIN eingeben":"Neue PIN festlegen (mind. 4 Zeichen)")+(p==="training"?" – nötig für die Training-Abfrage":" – nötig für den TrainerIn-Modus");
+  $("pininp").inputMode="numeric";$("pinmsg").textContent="";$("pinreset").hidden=!has;$("pin").hidden=false;$("pininp").focus()}
+$("mode").onclick=()=>{if(mode==="trainer"){mode="spieler";qt="mood";applyMode()}else askPin("trainer")};
+$("pinx").onclick=()=>{$("pin").hidden=true;$("pininp").value=""};
+$("pinreset").onclick=()=>{prevFor=pinFor;pinFor="reset";$("pinlbl").textContent="Wiederherstellungscode eingeben";$("pininp").inputMode="text";$("pinmsg").textContent="";$("pininp").value="";$("pininp").focus()};
+$("pinok").onclick=async()=>{const v=$("pininp").value.trim();if(v.length<4){$("pinmsg").textContent="Mindestens 4 Zeichen.";return}
+  try{
+    if(pinFor==="reset"){if(await hash(v.toUpperCase())!==LS.get("tc_rec")){$("pinmsg").textContent="Falscher Code.";return}LS.del("tc_pin");$("pininp").value="";askPin(prevFor);return}
+    const h=await hash(v),st=LS.get("tc_pin");
+    if(!st){const rec=[...crypto.getRandomValues(new Uint8Array(6))].map(x=>"ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[x%32]).join("");
+      LS.set("tc_pin",h);LS.set("tc_rec",await hash(rec));alert("Dein Wiederherstellungscode lautet:\n\n"+rec+"\n\nBitte notieren und sicher aufbewahren. Nur damit lässt sich eine vergessene PIN zurücksetzen.")}
+    else if(st!==h){$("pinmsg").textContent="Falsche PIN.";return}
+    $("pininp").value="";$("pin").hidden=true;
+    if(pinFor==="training"){qt="training";renderFaces()}else{mode="trainer";applyMode()}
+  }catch(e){$("pinmsg").textContent="PIN-Prüfung nicht möglich (Seite muss über https geöffnet sein)."}};
+function applyMode(){const t=mode==="trainer";$("player").hidden=t;$("trainer").hidden=!t;$("pin").hidden=true;
+  $("mode").textContent=t?"Zu SpielerIn wechseln":"Zu TrainerIn wechseln";
+  if(t){refresh();tab("avg")}else{$("avg").innerHTML=$("all").innerHTML=$("chart").innerHTML="";D=[]}
+  fillWho();renderFaces()}
+
+// Auswertung
+const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null,fm=v=>v==null?"–":Number.isInteger(v)?String(v):v.toFixed(2);
+function grp(rows,k){const O={};rows.forEach(r=>{const key=k(r);(O[key]=O[key]||{mood:[],training:[]})[r.type].push(r.score)});
+  return Object.entries(O).map(([k,v])=>{const i=k.indexOf("|");return{a:k.slice(0,i),n:k.slice(i+1),m:avg(v.mood),t:avg(v.training),c:v.mood.length+v.training.length}}).sort((x,y)=>y.a.localeCompare(x.a)||x.n.localeCompare(y.n))}
+function refresh(){const rows=data.entries.map(e=>({name:pname(e.pid),type:e.type,score:e.score,date:e.date}));
+  const M=grp(rows,r=>r.date.slice(0,7)+"|"+r.name);D=grp(rows,r=>r.date+"|"+r.name);const e="<tr><td colspan=5>Noch keine Einträge</td></tr>";
+  $("avg").innerHTML="<table><tr><th>Monat</th><th>Spieler</th><th>Stimmung Ø</th><th>Training Ø</th><th>Einträge</th></tr>"+(M.map(x=>`<tr><td>${x.a}</td><td>${esc(x.n)}</td><td>${fm(x.m)}</td><td>${fm(x.t)}</td><td>${x.c}</td></tr>`).join("")||e)+"</table><div class='hint'>5 = beste, 1 = schlechteste Antwort</div>";
+  $("all").innerHTML="<table><tr><th>Datum</th><th>Spieler</th><th>Stimmung</th><th>Training</th></tr>"+(D.map(x=>`<tr><td>${x.a}</td><td>${esc(x.n)}</td><td>${fm(x.m)}</td><td>${fm(x.t)}</td></tr>`).join("")||e)+"</table>";
+  chart(M);plist();backupInfo()}
+function chart(M){const mo=[...new Set(M.map(x=>x.a))].sort(),pl=[...new Set(M.map(x=>x.n))].sort();if(!pl.length){$("chart").textContent="Noch keine Einträge";return}
+  const W=320,H=150,L=26,R=10,T=10,B=26,X=i=>mo.length>1?L+i*(W-L-R)/(mo.length-1):(L+W-R)/2,Y=v=>T+(5-v)*(H-T-B)/4;
+  let o="<div class='leg'><span style='color:var(--c1)'>● Stimmung</span><span style='color:var(--c2)'>● Training</span></div>";
+  pl.forEach(p=>{const pm=Object.fromEntries(M.filter(x=>x.n===p).map(x=>[x.a,x]));let g="";
+    for(let v=1;v<=5;v++)g+=`<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--bd)"/><text x="${L-6}" y="${Y(v)+4}" font-size="10" text-anchor="end" fill="var(--mu)">${v}</text>`;
+    mo.forEach((m,i)=>g+=`<text x="${X(i)}" y="${H-8}" font-size="10" text-anchor="middle" fill="var(--mu)">${m.slice(5)}/${m.slice(2,4)}</text>`);
+    [["m","var(--c1)"],["t","var(--c2)"]].forEach(([k,c])=>{const pts=mo.map((m,i)=>pm[m]&&pm[m][k]!=null?[X(i),Y(pm[m][k])]:null).filter(Boolean);
+      if(pts.length>1)g+=`<polyline points="${pts.map(q=>q.join(",")).join(" ")}" fill="none" stroke="${c}" stroke-width="2.5"/>`;pts.forEach(q=>g+=`<circle cx="${q[0]}" cy="${q[1]}" r="4" fill="${c}"/>`)});
+    o+=`<div class="chart"><h3>${esc(p)}</h3><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Verlauf ${esc(p)}">${g}</svg></div>`});
+  $("chart").innerHTML=o}
+document.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>tab(b.dataset.t));
+function tab(t){["avg","all","chart","pl","bk"].forEach(id=>{$(id).hidden=id!==t});document.querySelectorAll("[data-t]").forEach(b=>b.className="btn"+(b.dataset.t===t?"":" sec"))}
+
+// Spieler
+function plist(){const b=$("plist");b.innerHTML="";data.players.forEach(p=>{const r=document.createElement("div");r.className="row";const s=document.createElement("span");s.style.flex="1";s.textContent=p.name;
+  const x=document.createElement("button");x.className="btn sec";x.textContent="Entfernen";
+  x.onclick=()=>{if(!confirm(p.name+" und alle Einträge löschen?"))return;data.players=data.players.filter(q=>q.id!==p.id);data.entries=data.entries.filter(e=>e.pid!==p.id);save();refresh();fillWho()};
+  r.append(s,x);b.appendChild(r)})}
+$("nadd").onclick=()=>{const n=$("nn").value.trim();if(!n)return;if(data.players.some(p=>p.name.toLowerCase()===n.toLowerCase()))return alert("Name existiert schon.");
+  data.players.push({id:Math.max(0,...data.players.map(p=>p.id))+1,name:n});$("nn").value="";save();refresh();fillWho()};
+
+// Sicherung
+async function saveFile(name,text,type){const blob=new Blob([text],{type}),file=new File([blob],name,{type});
+  try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:name});return true}}catch(e){if(e.name==="AbortError")return false}
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();return true}
+function backupInfo(){const t=+LS.get("tc_last"),days=t?Math.floor((Date.now()-t)/864e5):null;
+  $("last").textContent=t?"Letzte Sicherung: "+new Date(t).toLocaleDateString("de-DE")+" ("+(days===0?"heute":"vor "+days+" Tagen")+")":"Noch keine Sicherung erstellt.";
+  const w=$("warn");if(data.entries.length&&(days===null||days>=7)){w.hidden=false;w.textContent="⚠️ Bitte Sicherung erstellen (Tab „Sicherung“). Die Daten liegen nur auf diesem iPad."}else w.hidden=true}
+$("exp").onclick=async()=>{if(await saveFile("team-check-"+today()+".json",JSON.stringify({v:1,exported:new Date().toISOString(),players:data.players,entries:data.entries},null,1),"application/json")){LS.set("tc_last",Date.now());backupInfo();say("bm","Sicherung erstellt. Wähle im Menü „In Dateien sichern“.",1)}};
+$("csv").onclick=()=>{const q=s=>'"'+String(s).replace(/"/g,'""')+'"';
+  saveFile("team-check-"+today()+".csv","\ufeffDatum;Spieler;Stimmung;Training\n"+[...D].reverse().map(x=>[x.a,q(x.n),fm(x.m),fm(x.t)].join(";")).join("\n"),"text/csv")};
+$("imp").onclick=()=>$("file").click();
+$("file").onchange=async e=>{const f=e.target.files[0];e.target.value="";if(!f)return;
+  try{const d=JSON.parse(await f.text());if(!Array.isArray(d.players)||!Array.isArray(d.entries))throw 0;
+    if(!confirm("Alle aktuellen Daten durch diese Sicherung ersetzen? ("+d.players.length+" Spieler, "+d.entries.length+" Einträge)"))return;
+    data={players:d.players,entries:d.entries};if(save()){refresh();fillWho();say("bm","Sicherung wiederhergestellt.",1)}}
+  catch(err){say("bm","Datei konnte nicht gelesen werden.")}};
+
+if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+fillWho();applyMode();
+</script></body></html>
