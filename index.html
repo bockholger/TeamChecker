@@ -18,6 +18,7 @@ select,input{font:inherit;color:var(--tx);width:100%;padding:12px;border-radius:
 .face{font:inherit;background:var(--bg);border:2px solid var(--bd);border-radius:14px;padding:10px 2px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--mu)}
 .face svg{width:100%;max-width:70px}.face span{font-size:12px;text-align:center;line-height:1.2}.face:active{border-color:var(--ac)}
 .msg{min-height:22px;margin-top:10px;font-weight:600}.ok{color:#15803d}.bad{color:#b91c1c}.hint{font-size:12px;color:var(--mu);margin-top:8px}
+.voted{margin-top:14px;font-size:14px;color:var(--mu)}.voted b{color:var(--tx)}
 .warn{background:#fef3c7;color:#78350f;border-radius:12px;padding:12px;margin-bottom:12px;font-size:14px}
 .scroll{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:14px}th,td{text-align:left;padding:8px;border-bottom:1px solid var(--bd);white-space:nowrap}th{color:var(--mu)}
 .q{font-size:19px;font-weight:600;margin-top:12px}.chart h3{font-size:15px;margin:0 0 6px}.chart svg{width:100%;height:auto}.leg{font-size:12px;color:var(--mu);display:flex;gap:14px;margin-bottom:10px}
@@ -30,8 +31,9 @@ select,input{font:inherit;color:var(--tx);width:100%;padding:12px;border-radius:
 
 <div id="player" class="card">
   <label>Wer bist du?<select id="who"></select></label>
-  <div class="tabs" style="margin:14px 0 0"><button class="btn" id="q1">Stimmung</button><button class="btn sec" id="q2">Training 🔒</button></div>
+  <div class="tabs" style="margin:14px 0 0"><button class="btn" id="q1">Stimmung</button><button class="btn sec" id="q2">Training</button></div>
   <div class="q" id="qtext"></div><div class="faces" id="faces"></div><div class="msg" id="msg"></div>
+  <div class="voted" id="voted"></div>
   <div class="hint">Hier werden keine Ergebnisse angezeigt.</div>
 </div>
 
@@ -70,20 +72,25 @@ function fillWho(){const s=$("who"),cur=LS.get("tc_cur");s.innerHTML="";
   if(!data.players.length)s.innerHTML="<option value=''>– noch keine Spieler (TrainerIn legt sie an) –</option>";
   data.players.forEach(p=>{const o=document.createElement("option");o.value=p.id;o.textContent=p.name;if(String(p.id)===cur)o.selected=true;s.appendChild(o)})}
 $("who").onchange=e=>LS.set("tc_cur",e.target.value);
-function renderFaces(){$("qtext").textContent=Q[qt].q;$("msg").textContent="";$("q1").className="btn"+(qt==="mood"?"":" sec");$("q2").className="btn"+(qt==="training"?"":" sec");
+const hasVoted=(pid,type)=>data.entries.some(e=>e.pid===pid&&e.type===type&&e.date===today());
+function renderVoted(){const names=data.players.filter(p=>hasVoted(p.id,qt)).map(p=>esc(p.name)).sort((a,b)=>a.localeCompare(b,"de"));
+  $("voted").innerHTML="<b>Heute bereits abgestimmt ("+(qt==="mood"?"Stimmung":"Training")+"):</b> "+(names.length?names.join(", "):"noch niemand")}
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)renderVoted()});
+function renderFaces(){renderVoted();$("qtext").textContent=Q[qt].q;$("msg").textContent="";$("q1").className="btn"+(qt==="mood"?"":" sec");$("q2").className="btn"+(qt==="training"?"":" sec");
   const box=$("faces");box.innerHTML="";BASE.forEach((f,i)=>{const t=Q[qt].l[i],b=document.createElement("button");b.className="face";b.setAttribute("aria-label",t);
     b.innerHTML=`<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="${f.c}" stroke="#0003" stroke-width="2"/><circle cx="35" cy="40" r="5" fill="#222"/><circle cx="65" cy="40" r="5" fill="#222"/><path d="${f.m}" fill="none" stroke="#222" stroke-width="5" stroke-linecap="round"/></svg><span>${t}</span>`;
     b.onclick=()=>send(5-i);box.appendChild(b)})}
 $("q1").onclick=()=>{qt="mood";renderFaces()};
-$("q2").onclick=()=>{if(qt!=="training")askPin("training")};
+$("q2").onclick=()=>{qt="training";renderFaces()};
 function send(score){const id=+$("who").value;if(!id)return say("msg","Bitte zuerst einen Spieler wählen.");
+  if(hasVoted(id,qt))return say("msg","Du hast bereits abgestimmt.");
   data.entries.push({pid:id,type:qt,score,date:today(),ts:new Date().toISOString()});
-  if(save()){say("msg","Danke, "+pname(id)+"! Gespeichert.",1);setTimeout(()=>$("msg").textContent="",3000)}else data.entries.pop()}
+  if(save()){renderVoted();say("msg","Danke, "+pname(id)+"! Gespeichert.",1);setTimeout(()=>$("msg").textContent="",3000)}else data.entries.pop()}
 
 // PIN & Modus
 async function hash(v){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode("tc:"+v));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("")}
 function askPin(p){pinFor=p;const has=LS.get("tc_pin");
-  $("pinlbl").textContent=(has?"PIN eingeben":"Neue PIN festlegen (mind. 4 Zeichen)")+(p==="training"?" – nötig für die Training-Abfrage":" – nötig für den TrainerIn-Modus");
+  $("pinlbl").textContent=(has?"PIN eingeben":"Neue PIN festlegen (mind. 4 Zeichen)")+({training:" – nötig für den Wechsel zur Training-Abfrage",mood:" – nötig für den Wechsel zur Stimmungs-Abfrage"}[p]||" – nötig für den TrainerIn-Modus");
   $("pininp").inputMode="numeric";$("pinmsg").textContent="";$("pinreset").hidden=!has;$("pin").hidden=false;$("pininp").focus()}
 $("mode").onclick=()=>{if(mode==="trainer"){mode="spieler";qt="mood";applyMode()}else askPin("trainer")};
 $("pinx").onclick=()=>{$("pin").hidden=true;$("pininp").value=""};
@@ -96,7 +103,7 @@ $("pinok").onclick=async()=>{const v=$("pininp").value.trim();if(v.length<4){$("
       LS.set("tc_pin",h);LS.set("tc_rec",await hash(rec));alert("Dein Wiederherstellungscode lautet:\n\n"+rec+"\n\nBitte notieren und sicher aufbewahren. Nur damit lässt sich eine vergessene PIN zurücksetzen.")}
     else if(st!==h){$("pinmsg").textContent="Falsche PIN.";return}
     $("pininp").value="";$("pin").hidden=true;
-    if(pinFor==="training"){qt="training";renderFaces()}else{mode="trainer";applyMode()}
+    if(pinFor==="training"||pinFor==="mood"){qt=pinFor;renderFaces()}else{mode="trainer";applyMode()}
   }catch(e){$("pinmsg").textContent="PIN-Prüfung nicht möglich (Seite muss über https geöffnet sein)."}};
 function applyMode(){const t=mode==="trainer";$("player").hidden=t;$("trainer").hidden=!t;$("pin").hidden=true;
   $("mode").textContent=t?"Zu SpielerIn wechseln":"Zu TrainerIn wechseln";
